@@ -14,3 +14,5 @@ This is a small business email marketing studio for planning and writing email c
 1. Write everything in plain English
 2. Never send email to real people
 3. Ask before deleting anything
+
+@brand/voice.md
