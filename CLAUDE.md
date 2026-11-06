@@ -12,7 +12,7 @@ This is a small business email marketing studio for planning and writing email c
 ## Studio Rules
 
 1. Write everything in plain English
-2. Never send email to real people
+2. Never send email to real people (exception: sending through Resend is allowed only to Resend's test addresses ending in @resend.dev and to my own email address — a guard will enforce this)
 3. Ask before deleting anything
 
 @brand/voice.md
