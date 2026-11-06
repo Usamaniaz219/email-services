@@ -1,68 +1,98 @@
 #!/usr/bin/env node
 
-import { readFileSync } from 'fs';
+import { createInterface } from 'readline';
 
-const input = readFileSync(0, 'utf-8');
-const toolCall = JSON.parse(input);
+async function readStdin() {
+  const lines = [];
+  const rl = createInterface({ input: process.stdin });
 
-const { tool_name, tool_input } = toolCall;
+  for await (const line of rl) {
+    lines.push(line);
+  }
 
-const myEmail = process.env.MY_EMAIL;
-
-function isAllowedAddress(address) {
-  if (!address) return false;
-  return address.endsWith('@resend.dev') || address === myEmail;
+  return lines.join('\n');
 }
 
-function collectAddresses(input) {
-  const addresses = [];
+function extractEmails(input) {
+  const emails = [];
 
   if (input.to) {
     if (Array.isArray(input.to)) {
-      addresses.push(...input.to);
-    } else {
-      addresses.push(input.to);
+      emails.push(...input.to);
+    } else if (typeof input.to === 'string') {
+      emails.push(input.to);
     }
   }
 
   if (input.cc) {
     if (Array.isArray(input.cc)) {
-      addresses.push(...input.cc);
-    } else {
-      addresses.push(input.cc);
+      emails.push(...input.cc);
+    } else if (typeof input.cc === 'string') {
+      emails.push(input.cc);
     }
   }
 
   if (input.bcc) {
     if (Array.isArray(input.bcc)) {
-      addresses.push(...input.bcc);
-    } else {
-      addresses.push(input.bcc);
+      emails.push(...input.bcc);
+    } else if (typeof input.bcc === 'string') {
+      emails.push(input.bcc);
     }
   }
 
-  return addresses;
+  return emails;
 }
 
-if (tool_name === 'mcp__resend__send-email' || tool_name === 'mcp__resend__send-batch-emails') {
-  const addresses = collectAddresses(tool_input);
+async function main() {
+  try {
+    const input = await readStdin();
+    const toolCall = JSON.parse(input);
 
-  for (const address of addresses) {
-    if (!isAllowedAddress(address)) {
-      console.log(`Blocked: ${address} is not a Resend test address (@resend.dev) or your email`);
+    const { tool_name, tool_input } = toolCall;
+
+    const alwaysBlockTools = [
+      'mcp__resend__send-broadcast',
+      'mcp__resend__create-automation',
+      'mcp__resend__send-inbox-draft',
+      'mcp__resend__send-new-inbox-email'
+    ];
+
+    if (alwaysBlockTools.includes(tool_name)) {
+      console.error(`Blocked: ${tool_name} can send to multiple people and is not allowed in practice mode`);
       process.exit(2);
     }
+
+    const emailSendTools = [
+      'mcp__resend__send-email',
+      'mcp__resend__send-batch-emails'
+    ];
+
+    if (emailSendTools.includes(tool_name)) {
+      const myEmail = process.env.MY_EMAIL;
+
+      if (!myEmail) {
+        console.error('Blocked: MY_EMAIL environment variable not set');
+        process.exit(2);
+      }
+
+      const emails = extractEmails(tool_input);
+
+      for (const email of emails) {
+        const emailStr = typeof email === 'object' ? email.email : email;
+
+        if (!emailStr.endsWith('@resend.dev') && emailStr !== myEmail) {
+          console.error(`Blocked: Cannot send to ${emailStr} (only @resend.dev and ${myEmail} allowed)`);
+          process.exit(2);
+        }
+      }
+    }
+
+    process.exit(0);
+
+  } catch (error) {
+    console.error(`Guard error: ${error.message}`);
+    process.exit(1);
   }
-
-  process.exit(0);
 }
 
-if (tool_name === 'mcp__resend__send-broadcast' ||
-    tool_name === 'mcp__resend__create-automation' ||
-    tool_name === 'mcp__resend__send-inbox-draft' ||
-    tool_name === 'mcp__resend__send-new-inbox-email') {
-  console.log(`Blocked: ${tool_name} can reach whole lists of people`);
-  process.exit(2);
-}
-
-process.exit(0);
+main();
