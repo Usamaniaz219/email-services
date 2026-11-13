@@ -36,7 +36,7 @@ P.S. Your waitlist access is available through Friday. After that, we open to th
 **Happy to help,**
 
 Sarah Chen  
-Zoneomics Team
+Kettlebird Tea Team
 
 You're getting this because you joined the Kettlebird Tea waitlist.
 Kettlebird Tea, {{company_address}} · Unsubscribe: {{unsubscribe_url}}
